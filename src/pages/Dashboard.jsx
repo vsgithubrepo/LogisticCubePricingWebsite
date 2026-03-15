@@ -100,7 +100,7 @@ export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout,
       <div style={{background:SF,borderBottom:`1px solid ${B0}`,height:62,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:"0 1px 8px rgba(0,0,0,.06)"}}>
         {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <img src="/etechcube-logo.png" alt="eTechCube" style={{height:34,objectFit:"contain"}}
+          <img src="/etechcube-logo.jpg" alt="eTechCube" style={{height:34,objectFit:"contain"}}
             onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}}/>
           <div style={{display:"none",width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${T0},#0A6E68)`,alignItems:"center",justifyContent:"center",fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:17,color:W}}>e</div>
           <div>

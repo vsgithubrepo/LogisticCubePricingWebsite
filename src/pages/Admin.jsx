@@ -132,7 +132,7 @@ export default function AdminPanel({ pricing, setPricing, onBack, user }) {
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <button onClick={onBack} style={{background:SF2,border:`1px solid ${B0}`,borderRadius:8,color:S1,padding:"6px 14px",fontSize:13,cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>← Back</button>
           <div style={{width:1,height:24,background:B0}}/>
-          <img src="/etechcube-logo.png" alt="eTechCube" style={{height:28,objectFit:"contain"}} onError={e=>{e.target.style.display='none';}}/>
+          <img src="/etechcube-logo.jpg" alt="eTechCube" style={{height:28,objectFit:"contain"}} onError={e=>{e.target.style.display='none';}}/>
           <div style={{fontFamily:"Syne,sans-serif",fontSize:15,fontWeight:800,color:S0}}>Admin Panel</div>
           <span style={{fontSize:11,padding:"2px 10px",borderRadius:20,background:`${RD}12`,color:RD,border:`1px solid ${RD}25`,fontWeight:700}}>ADMIN ONLY</span>
         </div>

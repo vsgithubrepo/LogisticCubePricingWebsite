@@ -47,7 +47,7 @@ export default function Login({ onLogin }) {
     <div style={{minHeight:"100vh",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{width:"100%",maxWidth:440}}>
         <div style={{textAlign:"center",marginBottom:32}}>
-          <img src="/etechcube-logo.png" alt="eTechCube" style={{height:48,objectFit:"contain",marginBottom:12}}
+          <img src="/etechcube-logo.jpg" alt="eTechCube" style={{height:48,objectFit:"contain",marginBottom:12}}
             onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='inline-flex';}}/>
           <div style={{display:"none",width:56,height:56,borderRadius:16,background:"linear-gradient(135deg,#0D9488,#0A6E68)",alignItems:"center",justifyContent:"center",fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:28,color:"#fff",margin:"0 auto 12px"}}>e</div>
           <div style={{fontFamily:"Syne,sans-serif",fontSize:24,fontWeight:800,color:"#0F172A"}}>eTechCube</div>
