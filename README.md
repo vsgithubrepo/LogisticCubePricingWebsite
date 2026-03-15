@@ -1,188 +1,253 @@
-# eTechCube — Logistics Cube Pricing Tool v2
-
-Full-featured pricing calculator with login, admin panel, PDF/Excel export, quote history and cloud DB.
-
+# eTechCube — Logistics Cube Pricing Tool
+ 
+> Internal sales tool for generating professional pricing quotes for the Logistics Cube platform.
+> Built with React + Vite + Supabase.
+ 
+**Live URL:** https://logistic-cube-pricing-website-git-main-vsgithubrepos-projects.vercel.app
+ 
 ---
-
-## 🚀 Quick Start
-
-```
+ 
+## ✨ What This Tool Does
+ 
+The eTechCube Pricing Tool allows the sales team to:
+- Build custom quotes for prospective clients by selecting software modules, server packages and API integrations
+- Calculate grand totals in real time including volume tier surcharges and annual discounts
+- Export professional quotes as PDF or Excel files for client handover
+- Save quotes to a database and retrieve them from a history dashboard
+- Manage all pricing from a secure admin panel without touching any code
+ 
+---
+ 
+## 👥 User Roles
+ 
+| Role | What They Can Do |
+|------|-----------------|
+| **admin** | Everything — edit prices, view all team quotes, access Admin Panel |
+| **sales** | Create quotes, export PDF/Excel, view their own quote history |
+ 
+Current admin users: `rajeev@etechcube.com`, `vikas@etechcube.com`
+ 
+---
+ 
+## 🔑 Features
+ 
+| Feature | Details |
+|---------|---------|
+| 🔐 Authentication | Each sales rep has their own login. Powered by Supabase Auth |
+| 🛡️ Admin Panel | Edit module prices, server costs, volume tiers, API slabs, rate card |
+| 📦 Module Manager | 110+ modules across 12 sections. Add, edit, delete, duplicate, change category |
+| 🖥️ Server Pricing | 6 cloud providers × 6 packages + additional storage + managed backup |
+| 🔌 API Integrations | 28 APIs with volume-based surcharge slabs |
+| 💻 Professional Services | Custom Dev, Implementation, Training with day rate calculator |
+| 📄 PDF Export | Branded A4 quote document ready for client |
+| 📊 Excel Export | 4-sheet workbook with full cost breakdown |
+| 💾 Save Quotes | Quotes saved to Supabase with full customer details |
+| 📚 Quote History | Browse, view, reload and delete past quotes |
+| 🔄 State Persistence | Work in progress is saved — no data lost on navigation |
+| 📱 Mobile Responsive | Works on phones and tablets |
+ 
+---
+ 
+## 🚀 Quick Start (Local Development)
+ 
+```bash
+# 1. Clone the repo
+git clone https://github.com/vsgithubrepo/LogisticCubePricingWebsite.git
+cd LogisticCubePricingWebsite
+ 
+# 2. Install dependencies
 npm install
+ 
+# 3. Create .env file (see below)
+cp .env.example .env
+ 
+# 4. Start dev server
 npm run dev
 ```
-
+ 
 ---
-
-## 🗄️ Supabase Setup (Free Cloud DB + Auth)
-
-### Step 1 — Create free account
-Go to https://supabase.com → Sign up → New Project
-Choose a name, set a DB password, pick a region close to India (e.g. Singapore).
-
-### Step 2 — Get your API keys
-In your Supabase project → Settings → API
-Copy:
-- **Project URL** (looks like: https://xyzxyz.supabase.co)
-- **anon public key** (long string starting with eyJ...)
-
-### Step 3 — Create .env file
-Copy `.env.example` to `.env` and fill in your keys:
+ 
+## 🗄️ Environment Variables
+ 
+Create a `.env` file in the project root (never commit this file):
+ 
 ```
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
+VITE_SUPABASE_URL=https://vlaguonommcycwjdclgq.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ```
-
-### Step 4 — Run this SQL in Supabase SQL Editor
-Go to your Supabase project → SQL Editor → New Query → paste and run:
-
+ 
+Get the anon key from: Supabase Dashboard → Settings → API Keys → Legacy anon key
+ 
+---
+ 
+## 🗃️ Database Setup (Supabase)
+ 
+Project: `etechcube-pricing` | ID: `vlaguonommcycwjdclgq`
+ 
+### Tables
+ 
+| Table | Purpose |
+|-------|---------|
+| `profiles` | One row per user — stores name, email, role |
+| `pricing_config` | Single row (id=1) — stores all admin-editable pricing as JSON |
+| `quotes` | All saved quotes with customer details and quote data |
+| `quote_events` | Audit log — tracks downloads, shares, views |
+ 
+### Run this SQL to set up the database from scratch
+ 
 ```sql
 -- Profiles table
-CREATE TABLE profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY,
-  email TEXT NOT NULL,
-  full_name TEXT,
-  role TEXT NOT NULL DEFAULT 'sales',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS profiles (
+  id          UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email       TEXT NOT NULL,
+  full_name   TEXT,
+  role        TEXT NOT NULL DEFAULT 'sales',
+  created_at  TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Pricing config (single row, admin editable)
-CREATE TABLE pricing_config (
-  id INTEGER PRIMARY KEY DEFAULT 1,
-  config JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_by TEXT
+ 
+-- Pricing config
+CREATE TABLE IF NOT EXISTS pricing_config (
+  id          INT PRIMARY KEY DEFAULT 1,
+  config      JSONB NOT NULL,
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_by  TEXT
 );
-
--- Quotes table
-CREATE TABLE quotes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_by UUID REFERENCES profiles(id),
+ 
+-- Quotes
+CREATE TABLE IF NOT EXISTS quotes (
+  id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_by       UUID REFERENCES profiles(id),
   created_by_email TEXT,
-  created_by_name TEXT,
-  customer_name TEXT NOT NULL,
-  customer_email TEXT,
+  created_by_name  TEXT,
+  customer_name    TEXT,
+  customer_email   TEXT,
   customer_company TEXT,
-  quote_data JSONB NOT NULL,
-  grand_total NUMERIC,
-  billing_cycle TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  grand_total      NUMERIC,
+  billing_cycle    TEXT,
+  quote_data       JSONB,
+  share_token      TEXT UNIQUE,
+  is_shared        BOOLEAN DEFAULT FALSE,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Row Level Security
-ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pricing_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
-
--- Profiles policies
-CREATE POLICY "profiles_read"   ON profiles FOR SELECT USING (true);
-CREATE POLICY "profiles_insert" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
-CREATE POLICY "profiles_update" ON profiles FOR UPDATE USING (auth.uid() = id);
-
--- Pricing config: everyone reads, only admin writes
-CREATE POLICY "pricing_read"  ON pricing_config FOR SELECT USING (true);
-CREATE POLICY "pricing_write" ON pricing_config FOR ALL USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+ 
+-- Quote events
+CREATE TABLE IF NOT EXISTS quote_events (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  quote_id     UUID REFERENCES quotes(id) ON DELETE CASCADE,
+  event_type   TEXT,
+  triggered_by TEXT,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Quotes: users see own, admin sees all
-CREATE POLICY "quotes_insert" ON quotes FOR INSERT WITH CHECK (auth.uid() = created_by);
-CREATE POLICY "quotes_select" ON quotes FOR SELECT USING (
-  auth.uid() = created_by OR
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
-CREATE POLICY "quotes_update" ON quotes FOR UPDATE USING (auth.uid() = created_by);
-CREATE POLICY "quotes_delete" ON quotes FOR DELETE USING (
-  auth.uid() = created_by OR
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-);
-
+ 
 -- Auto-create profile on signup
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public AS $$
 BEGIN
-  INSERT INTO profiles (id, email, full_name, role)
+  INSERT INTO public.profiles (id, email, full_name, role)
   VALUES (
-    NEW.id, NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'sales')
-  );
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    'sales'
+  )
+  ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
+EXCEPTION WHEN OTHERS THEN RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
+$$;
+ 
+CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+ 
+-- Enable Row Level Security
+ALTER TABLE profiles      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quotes        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pricing_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quote_events  ENABLE ROW LEVEL SECURITY;
+ 
+-- RLS Policies
+CREATE POLICY "profiles_own"         ON profiles      FOR ALL USING (auth.uid() = id);
+CREATE POLICY "quotes_own"           ON quotes        FOR ALL USING (auth.uid() = created_by OR (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
+CREATE POLICY "pricing_read"         ON pricing_config FOR SELECT USING (TRUE);
+CREATE POLICY "pricing_admin_write"  ON pricing_config FOR ALL USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
+CREATE POLICY "events_own"           ON quote_events  FOR ALL USING ((SELECT created_by FROM quotes WHERE id = quote_id) = auth.uid() OR (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
+ 
+-- Promote users to admin
+UPDATE public.profiles SET role = 'admin'
+WHERE email IN ('rajeev@etechcube.com', 'vikas@etechcube.com');
 ```
-
-### Step 5 — Create your Admin account
-1. Go to your app → Sign up with your email
-2. In Supabase → Table Editor → profiles → find your row → change `role` from `sales` to `admin`
-3. You now have full admin access including the 🛡️ Admin price editor
-
+ 
 ---
-
-## 👥 How Roles Work
-
-| Role | Can do |
-|---|---|
-| **admin** | Edit prices, view ALL quotes, access Admin panel |
-| **sales** | Create quotes, view own quote history only |
-
-To create a sales rep account: they sign up themselves, or you sign them up. Their role defaults to `sales`.
-
----
-
-## 🔑 Features
-
-| Feature | Description |
-|---|---|
-| 🔐 Login | Each user has their own account |
-| 🛡️ Admin Panel | Edit all prices, rates, tiers — only admin can see |
-| 📦 110 Modules | Toggle on/off, prices shown to sales team (not editable) |
-| 🖥️ Server | 6 providers × 6 packages + storage + backup |
-| 🔌 28 APIs | Volume slabs + 7 provider options each |
-| 💻 Prof. Services | Custom Dev, Implementation, Training |
-| 📄 PDF Export | Branded 4-section A4 quote document |
-| 📊 Excel Export | 4-sheet workbook with full breakdown |
-| 💾 Save Quote | Each quote saved to Supabase with customer name |
-| 📚 History | Browse, view, reload, delete past quotes |
-
----
-
+ 
 ## 📦 Deploy to Vercel
-
-1. Push to GitHub
-2. Go to vercel.com → Import repo
-3. In Vercel project settings → Environment Variables → add:
+ 
+1. Push to GitHub — Vercel auto-deploys on every push
+2. Add environment variables in Vercel → Project → Settings → Environment Variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-4. Deploy
-
-Every `git push` auto-redeploys.
-
+3. Redeploy once after adding variables
+ 
 ---
-
-## 📁 File Structure
-
+ 
+## 📁 Project Structure
+ 
 ```
-src/
-├── App.jsx                 ← Root: auth, routing, pricing state
-├── supabase.js             ← Supabase client
-├── data/defaults.js        ← All 110 modules, 28 APIs, rates (default values)
-├── components/ui.jsx       ← Shared UI atoms (Card, Toggle, etc.)
-├── pages/
-│   ├── Login.jsx           ← Sign in / Sign up
-│   ├── Dashboard.jsx       ← Main pricing tool (all 8 tabs)
-│   ├── Admin.jsx           ← Price editor (admin only)
-│   └── History.jsx         ← Quote history
-└── utils/
-    ├── calc.js             ← All calculation logic
-    ├── exportPDF.js        ← jsPDF branded quote
-    └── exportExcel.js      ← SheetJS 4-sheet workbook
+LogisticCubePricingWebsite/
+├── .env                        ← Local secrets (never commit)
+├── .env.example                ← Template for new developers
+├── .gitignore                  ← Protects .env and APIKey.txt
+├── package.json
+├── vite.config.js
+├── index.html
+├── public/
+│   └── etechcube-logo.png      ← Company logo
+└── src/
+    ├── App.jsx                 ← Root: auth, routing, pricing state
+    ├── supabase.js             ← Supabase client setup
+    ├── index.css               ← Global styles and light theme tokens
+    ├── main.jsx
+    ├── hooks/
+    │   └── usePersistentState.js  ← Saves state to sessionStorage
+    ├── components/
+    │   └── ui.jsx              ← Shared UI: Card, Toggle, Button etc.
+    ├── data/
+    │   └── defaults.js         ← All 110 modules, 28 APIs, default pricing
+    ├── pages/
+    │   ├── Login.jsx           ← Sign in / Sign up / Forgot password
+    │   ├── Dashboard.jsx       ← Main pricing tool (8 tabs)
+    │   ├── Admin.jsx           ← Price editor — admin only
+    │   └── History.jsx         ← Quote history browser
+    └── utils/
+        ├── calc.js             ← All pricing calculation logic
+        ├── exportPDF.js        ← jsPDF branded quote export
+        └── exportExcel.js      ← SheetJS Excel workbook export
 ```
-
+ 
 ---
-
-Built by Claude for eTechCube LLP | www.etechcube.com
+ 
+## 🛠️ Tech Stack
+ 
+| Technology | Purpose |
+|-----------|---------|
+| React 18 | UI framework |
+| Vite 5 | Build tool and dev server |
+| Supabase | Database, authentication, real-time |
+| jsPDF + AutoTable | PDF quote generation |
+| SheetJS (xlsx) | Excel quote generation |
+| Vercel | Hosting and auto-deployment |
+ 
+---
+ 
+## 📋 Pending Features
+ 
+- [ ] Email notifications when a quote is downloaded or shared (Resend + Supabase Edge Function)
+- [ ] Public share link for quotes (shareable URL without login)
+- [ ] eTechCube logo on exported PDF and Excel files
+- [ ] Password change page for users
+ 
+---
+ 
+*Built for eTechCube LLP · www.etechcube.com · Confidential Internal Tool*

@@ -206,22 +206,34 @@ export default function AdminPanel({ pricing, setPricing, onBack, user }) {
             </div>
           )}
 
-          {aTab==='VolumeTiers'&&(
-            <div className="fade-in">
-              <STitle icon="📊" title="Volume Tier Surcharges" sub="Monthly surcharge based on order volume."/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,padding:"6px 12px",marginBottom:6}}>
-                {['Tier Label','Min Orders','Max Orders','Surcharge (₹/mo)'].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:S2,textTransform:"uppercase"}}>{h}</span>)}
-              </div>
-              {pricing.volTiers.map((t,i)=>(
-                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,alignItems:"center",padding:"8px 12px",borderRadius:8,marginBottom:6,background:SF,border:`1px solid ${B0}`}}>
-                  <input value={t.label} onChange={e=>updateVolT(i,'label',e.target.value)} style={{...fld,fontSize:12}}/>
-                  <input type="number" value={t.min} onChange={e=>updateVolT(i,'min',e.target.value)} style={num}/>
-                  <input type="number" value={t.max} onChange={e=>updateVolT(i,'max',e.target.value)} style={num}/>
-                  <input type="number" value={t.surcharge} onChange={e=>updateVolT(i,'surcharge',e.target.value)} style={num}/>
-                </div>
-              ))}
-            </div>
-          )}
+			{aTab==='VolumeTiers'&&(
+			  <div className="fade-in">
+				<STitle icon="📊" title="Volume Tier Surcharges" sub="Monthly surcharge based on order volume."/>
+				<div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 1fr 1fr 1fr",gap:8,padding:"6px 12px",marginBottom:6}}>
+				  {['Tier Label','Min Orders','Max Orders','Surcharge (₹/mo)','Per Unit Cost'].map(h=>(
+					<span key={h} style={{fontSize:10,fontWeight:700,color:S2,textTransform:"uppercase"}}>{h}</span>
+				  ))}
+				</div>
+				{pricing.volTiers.map((t,i)=>{
+				  const avgOrders = t.min === 0 ? t.max : Math.round((t.min + t.max) / 2);
+				  const perUnit = t.surcharge === 0 ? 0 : +(t.surcharge / avgOrders).toFixed(2);
+				  return(
+					<div key={i} style={{display:"grid",gridTemplateColumns:"1.5fr 1fr 1fr 1fr 1fr",gap:8,alignItems:"center",padding:"8px 12px",borderRadius:8,marginBottom:6,background:SF,border:`1px solid ${B0}`}}>
+					  <input value={t.label} onChange={e=>updateVolT(i,'label',e.target.value)} style={{...fld,fontSize:12}}/>
+					  <input type="number" value={t.min} onChange={e=>updateVolT(i,'min',e.target.value)} style={num}/>
+					  <input type="number" value={t.max} onChange={e=>updateVolT(i,'max',e.target.value)} style={num}/>
+					  <input type="number" value={t.surcharge} onChange={e=>updateVolT(i,'surcharge',e.target.value)} style={num}/>
+					  <div style={{textAlign:"right",padding:"6px 8px",background:perUnit===0?"#DCFCE7":"#FEF3C7",borderRadius:7,border:`1px solid ${perUnit===0?"#86EFAC":"#FCD34D"}`}}>
+						<div style={{fontFamily:"Syne,sans-serif",fontSize:13,fontWeight:700,color:perUnit===0?"#16A34A":"#92400E"}}>
+						  {perUnit===0?"FREE":`₹${perUnit}`}
+						</div>
+						<div style={{fontSize:9,color:S2,marginTop:1}}>per order</div>
+					  </div>
+					</div>
+				  );
+				})}
+			  </div>
+			)}
 
           {aTab==='APISlabs'&&(
             <div className="fade-in">
