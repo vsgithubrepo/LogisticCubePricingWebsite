@@ -1,268 +1,259 @@
 import { useState } from 'react';
 import { supabase, isConfigured } from '../supabase.js';
-import { Card, Lbl, STitle, TxtInput, NumInput, Btn, T0, T1, G0, W, S200, S300, S400, S500, S600, GR, RD, INR } from '../components/ui.jsx';
+import { Card, Lbl, STitle, Btn, T0, T1, T2, G0, GR, RD, W, SF, SF2, S0, S1, S2, S3, B0, B1, INR } from '../components/ui.jsx';
 import { PROVIDERS, PACKAGES } from '../data/defaults.js';
 
-const N0="#060D18",N1="#0A1525",N2="#0F1F35",N3="#162840",N4="#1E3554";
+const ADMIN_TABS = [
+  {id:'Global',icon:'⚙️',label:'Global'},
+  {id:'Modules',icon:'📦',label:'Modules'},
+  {id:'Server',icon:'🖥️',label:'Server'},
+  {id:'VolumeTiers',icon:'📊',label:'Volume Tiers'},
+  {id:'APISlabs',icon:'🔌',label:'API Slabs'},
+  {id:'RateCard',icon:'💼',label:'Rate Card'},
+];
 
-const ADMIN_TABS = ['Global','Modules','Server','Volume Tiers','API Slabs','Rate Card'];
+const ALL_SECTIONS = [
+  "EMS","Master Data","Operations","Manifest & Delivery",
+  "Accounts & Expense","Finance & Banking","Grievance",
+  "Analytics","Dashboards","Reports","Automation","Other Features"
+];
 
-export default function AdminPanel({ pricing, setPricing, onBack }) {
-  const [aTab,   setATab]   = useState('Global');
-  const [saving, setSaving] = useState(false);
-  const [saved,  setSaved]  = useState(false);
-  const [modQ,   setModQ]   = useState('');
+export default function AdminPanel({ pricing, setPricing, onBack, user }) {
+  const [aTab,setATab]=useState('Global');
+  const [saving,setSaving]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [modQ,setModQ]=useState('');
+  const [confirm,setConfirm]=useState(null);
 
   async function saveAll() {
     setSaving(true);
     if (isConfigured) {
-      await supabase.from('pricing_config').upsert({ id:1, config: pricing, updated_at: new Date().toISOString() });
+      await supabase.from('pricing_config').upsert({id:1,config:pricing,updated_at:new Date().toISOString(),updated_by:user?.email||'admin'});
     } else {
-      localStorage.setItem('etechcube_pricing', JSON.stringify(pricing));
+      localStorage.setItem('etechcube_pricing',JSON.stringify(pricing));
     }
-    setSaving(false); setSaved(true);
-    setTimeout(()=>setSaved(false), 3000);
+    setSaving(false);setSaved(true);
+    setTimeout(()=>setSaved(false),3000);
   }
 
-  const updateGbl  = (k,v) => setPricing(p=>({...p, gbl:{...p.gbl,[k]:v}}));
-  const updateVolT = (i,k,v) => setPricing(p=>{ const t=[...p.volTiers]; t[i]={...t[i],[k]:+v}; return {...p,volTiers:t}; });
-  const updateApiSl= (i,k,v) => setPricing(p=>{ const t=[...p.apiSlabs]; t[i]={...t[i],[k]:+v}; return {...p,apiSlabs:t}; });
-  const updateMod  = (i,k,v) => setPricing(p=>{ const t=[...p.modList]; t[i]={...t[i],[k]:k==='price'?+v:v}; return {...p,modList:t}; });
-  const updateSrv  = (prov,pi,v) => setPricing(p=>{ const sp={...p.srvPrices,[prov]:[...p.srvPrices[prov]]};sp[prov][pi]=+v;return{...p,srvPrices:sp};});
-  const updateStor = (prov,v) => setPricing(p=>({...p,storCost:{...p.storCost,[prov]:+v}}));
-  const updateRole = (cat,i,k,v) => setPricing(p=>{ const arr=[...p[cat]]; arr[i]={...arr[i],[k]:k==='rate'?+v:v}; return {...p,[cat]:arr}; });
+  const updateGbl=(k,v)=>setPricing(p=>({...p,gbl:{...p.gbl,[k]:v}}));
+  const updateVolT=(i,k,v)=>setPricing(p=>{const t=[...p.volTiers];t[i]={...t[i],[k]:+v};return{...p,volTiers:t};});
+  const updateApiSl=(i,k,v)=>setPricing(p=>{const t=[...p.apiSlabs];t[i]={...t[i],[k]:+v};return{...p,apiSlabs:t};});
+  const updateMod=(i,k,v)=>setPricing(p=>{const t=[...p.modList];t[i]={...t[i],[k]:k==='price'?+v:v};return{...p,modList:t};});
+  const updateSrv=(prov,pi,v)=>setPricing(p=>{const sp={...p.srvPrices,[prov]:[...p.srvPrices[prov]]};sp[prov][pi]=+v;return{...p,srvPrices:sp};});
+  const updateStor=(prov,v)=>setPricing(p=>({...p,storCost:{...p.storCost,[prov]:+v}}));
+  const updateRole=(cat,i,k,v)=>setPricing(p=>{const arr=[...p[cat]];arr[i]={...arr[i],[k]:k==='rate'?+v:v};return{...p,[cat]:arr};});
 
-  const fldStyle = {background:N3,border:`1px solid ${N4}`,borderRadius:7,color:W,
-    padding:"6px 10px",fontSize:13,outline:"none",width:"100%"};
-  const numFld = {background:N3,border:`1px solid ${N4}`,borderRadius:7,color:W,
-    padding:"6px 8px",fontSize:13,outline:"none",textAlign:"right"};
+  function addModule() {
+    const newId=`M${String(pricing.modList.length+1).padStart(3,'0')}`;
+    setPricing(p=>({...p,modList:[...p.modList,{id:newId,sec:ALL_SECTIONS[0],name:'New Module',ess:0,pro:1,pre:1,price:5000,desc:'Enter description'}]}));
+    setTimeout(()=>{const el=document.getElementById('mod-bottom');if(el)el.scrollIntoView({behavior:'smooth'});},100);
+  }
 
-  const filteredMods = pricing.modList.filter(m =>
-    !modQ || m.name.toLowerCase().includes(modQ.toLowerCase()) || m.sec.toLowerCase().includes(modQ.toLowerCase())
-  );
+  function deleteModule(id) {
+    setConfirm({type:'module',id,name:pricing.modList.find(m=>m.id===id)?.name});
+  }
+
+  function confirmDelete() {
+    if(confirm?.type==='module') setPricing(p=>({...p,modList:p.modList.filter(m=>m.id!==confirm.id)}));
+    setConfirm(null);
+  }
+
+  function duplicateModule(id) {
+    const orig=pricing.modList.find(m=>m.id===id);
+    if(!orig) return;
+    const newId=`M${String(pricing.modList.length+1).padStart(3,'0')}`;
+    setPricing(p=>({...p,modList:[...p.modList,{...orig,id:newId,name:orig.name+' (Copy)'}]}));
+  }
+
+  const filteredMods=modQ?pricing.modList.filter(m=>m.name.toLowerCase().includes(modQ.toLowerCase())||m.sec.toLowerCase().includes(modQ.toLowerCase())):pricing.modList;
+  const fld={background:SF2,border:`1px solid ${B0}`,borderRadius:7,color:S0,padding:"6px 10px",fontSize:13,outline:"none",width:"100%"};
+  const num={background:SF2,border:`1px solid ${B0}`,borderRadius:7,color:S0,padding:"6px 8px",fontSize:13,outline:"none",textAlign:"right"};
 
   return (
-    <div style={{minHeight:"100vh",background:N0,padding:"0"}}>
-      {/* Admin topbar */}
-      <div style={{background:N1,borderBottom:`1px solid ${N4}`,height:58,padding:"0 20px",
-        display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <button onClick={onBack} style={{background:N3,border:`1px solid ${N4}`,borderRadius:8,
-            color:S300,padding:"6px 12px",fontSize:12,cursor:"pointer"}}>← Back</button>
-          <div style={{fontFamily:"Syne, sans-serif",fontSize:15,fontWeight:800,color:W}}>
-            🛡️ Admin – Price Editor
+    <div style={{minHeight:"100vh",background:"#F8FAFC"}}>
+      {confirm&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
+          <div style={{background:SF,borderRadius:14,padding:28,maxWidth:400,width:"90%",boxShadow:"0 8px 32px rgba(0,0,0,.15)"}}>
+            <div style={{fontSize:32,textAlign:"center",marginBottom:12}}>🗑️</div>
+            <div style={{fontSize:16,fontWeight:700,color:S0,textAlign:"center",marginBottom:8}}>Delete Module?</div>
+            <div style={{fontSize:14,color:S1,textAlign:"center",marginBottom:24}}>Are you sure you want to delete <strong>"{confirm.name}"</strong>? This cannot be undone.</div>
+            <div style={{display:"flex",gap:10}}>
+              <Btn onClick={()=>setConfirm(null)} variant="ghost" style={{flex:1}}>Cancel</Btn>
+              <Btn onClick={confirmDelete} variant="danger" style={{flex:1}}>Yes, Delete</Btn>
+            </div>
           </div>
-          <span style={{fontSize:11,padding:"3px 10px",borderRadius:20,background:`${G0}20`,
-            color:G0,border:`1px solid ${G0}40`,fontWeight:600}}>ADMIN ONLY</span>
+        </div>
+      )}
+
+      <div style={{background:SF,borderBottom:`1px solid ${B0}`,height:58,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:"0 1px 4px rgba(0,0,0,.06)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <button onClick={onBack} style={{background:SF2,border:`1px solid ${B0}`,borderRadius:8,color:S1,padding:"6px 14px",fontSize:13,cursor:"pointer",fontFamily:"DM Sans,sans-serif"}}>← Back</button>
+          <div style={{width:1,height:24,background:B0}}/>
+          <img src="/etechcube-logo.png" alt="eTechCube" style={{height:28,objectFit:"contain"}} onError={e=>{e.target.style.display='none';}}/>
+          <div style={{fontFamily:"Syne,sans-serif",fontSize:15,fontWeight:800,color:S0}}>Admin Panel</div>
+          <span style={{fontSize:11,padding:"2px 10px",borderRadius:20,background:`${RD}12`,color:RD,border:`1px solid ${RD}25`,fontWeight:700}}>ADMIN ONLY</span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          {saved && <span style={{fontSize:12,color:GR}}>✓ Saved successfully</span>}
-          <Btn onClick={saveAll} style={{background:G0,opacity:saving?0.6:1}}>
-            {saving ? 'Saving…' : '💾 Save All Changes'}
-          </Btn>
+          {saved&&<span style={{fontSize:13,color:GR,fontWeight:600}}>✓ Saved!</span>}
+          <Btn onClick={saveAll} disabled={saving} style={{background:T0}}>{saving?'Saving…':'💾 Save All Changes'}</Btn>
         </div>
       </div>
 
-      <div style={{display:"flex",maxWidth:1280,margin:"0 auto"}}>
-        {/* Admin sidebar */}
-        <div style={{width:180,flexShrink:0,padding:"16px 10px",position:"sticky",
-          top:58,height:"calc(100vh - 58px)",overflowY:"auto",borderRight:`1px solid ${N4}30`}}>
+      <div style={{display:"flex",maxWidth:1320,margin:"0 auto"}}>
+        <div className="sidebar-nav" style={{width:200,flexShrink:0,padding:"16px 12px",position:"sticky",top:58,height:"calc(100vh - 58px)",overflowY:"auto",borderRight:`1px solid ${B0}`,background:SF}}>
           {ADMIN_TABS.map(t=>(
-            <div key={t} onClick={()=>setATab(t)}
-              style={{padding:"9px 12px",borderRadius:8,marginBottom:3,cursor:"pointer",
-                background:aTab===t?`${T0}22`:"transparent",
-                border:`1px solid ${aTab===t?T0+"55":"transparent"}`,
-                fontSize:13,fontWeight:aTab===t?600:400,color:aTab===t?T1:S400}}>
-              {t}
+            <div key={t.id} onClick={()=>setATab(t.id)} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 12px",borderRadius:8,marginBottom:3,cursor:"pointer",transition:"all .13s",background:aTab===t.id?T2:"transparent",border:`1px solid ${aTab===t.id?T0+"40":"transparent"}`,fontSize:13,fontWeight:aTab===t.id?600:400,color:aTab===t.id?T1:S2}}>
+              <span style={{fontSize:15}}>{t.icon}</span>{t.label}
             </div>
           ))}
+          <div style={{marginTop:20,padding:12,background:SF2,borderRadius:10,border:`1px solid ${B0}`}}>
+            <div style={{fontSize:10,color:S2,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Module Stats</div>
+            <div style={{fontSize:13,color:S0,fontWeight:600,marginBottom:4}}>Total: {pricing.modList.length}</div>
+            {ALL_SECTIONS.map(sec=>(
+              <div key={sec} style={{fontSize:11,color:S2,marginBottom:2}}>{sec.split(' ')[0]}: {pricing.modList.filter(m=>m.sec===sec).length}</div>
+            ))}
+          </div>
         </div>
 
-        <div style={{flex:1,padding:"24px 28px",overflowY:"auto"}}>
+        <div className="main-content" style={{flex:1,padding:"24px 28px",overflowY:"auto"}}>
 
-          {/* ── GLOBAL SETTINGS ── */}
-          {aTab==='Global' && (
-            <div>
+          {aTab==='Global'&&(
+            <div className="fade-in">
               <STitle icon="⚙️" title="Global Settings" sub="These values apply across all calculations."/>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
-                {[
-                  {label:"Annual Billing Discount",key:"annualDiscount",note:"e.g. 0.15 = 15%",mul:100,suffix:"%"},
-                  {label:"Managed Backup Add-on",key:"backupPct",note:"e.g. 0.20 = 20% of server cost",mul:100,suffix:"%"},
-                  {label:"Free API Hits / Month",key:"freeApiHits",note:"Per API service",mul:1,suffix:" hits"},
-                ].map(f=>(
+                {[{label:"Annual Billing Discount",key:"annualDiscount",note:"e.g. 0.15 = 15%",mul:100,suffix:"%"},{label:"Managed Backup Add-on",key:"backupPct",note:"e.g. 0.20 = 20% of server",mul:100,suffix:"%"},{label:"Free API Hits / Month",key:"freeApiHits",note:"Per API service",mul:1,suffix:" hits"}].map(f=>(
                   <Card key={f.key}>
                     <Lbl>{f.label}</Lbl>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <input type="number" value={Math.round(pricing.gbl[f.key]*f.mul)}
-                        onChange={e=>updateGbl(f.key,+e.target.value/f.mul)}
-                        style={{...numFld,width:100}}/>
-                      <span style={{fontSize:13,color:S400}}>{f.suffix}</span>
+                      <input type="number" value={Math.round(pricing.gbl[f.key]*f.mul)} onChange={e=>updateGbl(f.key,+e.target.value/f.mul)} style={{...num,width:100}}/>
+                      <span style={{fontSize:13,color:S2}}>{f.suffix}</span>
                     </div>
-                    <div style={{fontSize:11,color:S500,marginTop:6}}>{f.note}</div>
-                    <div style={{fontSize:12,color:T1,marginTop:4}}>
-                      Current: <strong>{pricing.gbl[f.key]*f.mul}{f.suffix}</strong>
-                    </div>
+                    <div style={{fontSize:11,color:S3,marginTop:6}}>{f.note}</div>
+                    <div style={{fontSize:12,color:T0,marginTop:4,fontWeight:600}}>Current: {pricing.gbl[f.key]*f.mul}{f.suffix}</div>
                   </Card>
                 ))}
               </div>
             </div>
           )}
 
-          {/* ── MODULE PRICES ── */}
-          {aTab==='Modules' && (
-            <div>
-              <STitle icon="📦" title="Module Price Editor" sub="Edit name and monthly price for each of the 110 modules."/>
-              <input value={modQ} onChange={e=>setModQ(e.target.value)} placeholder="🔍 Search modules…"
-                style={{...fldStyle,marginBottom:16,padding:"9px 12px"}}/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,
-                marginBottom:8,padding:"6px 10px"}}>
-                <span style={{fontSize:10,fontWeight:700,color:S500,textTransform:"uppercase"}}>Module Name</span>
-                <span style={{fontSize:10,fontWeight:700,color:S500,textTransform:"uppercase"}}>Section</span>
-                <span style={{fontSize:10,fontWeight:700,color:S500,textTransform:"uppercase",textAlign:"right"}}>Price (₹/mo)</span>
+          {aTab==='Modules'&&(
+            <div className="fade-in">
+              <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16,gap:16}}>
+                <STitle icon="📦" title="Module Manager" sub={`${pricing.modList.length} total modules · Add, edit, delete or change section`}/>
+                <Btn onClick={addModule} style={{background:T0,flexShrink:0,marginTop:4}}>+ Add Module</Btn>
               </div>
-              {filteredMods.map((m,_i)=>{
-                const i = pricing.modList.findIndex(x=>x.id===m.id);
-                return (
-                  <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,
-                    alignItems:"center",padding:"7px 10px",borderRadius:8,marginBottom:4,
-                    background:N2,border:`1px solid ${N4}`}}>
-                    <input value={m.name} onChange={e=>updateMod(i,'name',e.target.value)}
-                      style={{...fldStyle,fontSize:12}}/>
-                    <span style={{fontSize:11,color:S400}}>{m.sec}</span>
-                    <input type="number" value={m.price} onChange={e=>updateMod(i,'price',e.target.value)}
-                      style={{...numFld}}/>
+              <input value={modQ} onChange={e=>setModQ(e.target.value)} placeholder="🔍 Search by name or section…" style={{...fld,marginBottom:10,padding:"10px 14px",fontSize:14}}/>
+              {modQ&&<div style={{fontSize:12,color:S2,marginBottom:10}}>Showing {filteredMods.length} of {pricing.modList.length} modules</div>}
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr auto",gap:8,padding:"6px 12px",marginBottom:4}}>
+                {["Module Name","Section / Category","Price (₹/mo)","Actions"].map(h=>(
+                  <span key={h} style={{fontSize:10,fontWeight:700,color:S2,textTransform:"uppercase"}}>{h}</span>
+                ))}
+              </div>
+              {filteredMods.map(m=>{
+                const i=pricing.modList.findIndex(x=>x.id===m.id);
+                return(
+                  <div key={m.id} style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr auto",gap:8,alignItems:"center",padding:"8px 12px",borderRadius:8,marginBottom:5,background:SF,border:`1px solid ${B0}`,boxShadow:"0 1px 2px rgba(0,0,0,.04)"}}>
+                    <input value={m.name} onChange={e=>updateMod(i,'name',e.target.value)} style={{...fld,fontSize:13}}/>
+                    <select value={m.sec} onChange={e=>updateMod(i,'sec',e.target.value)} style={{...fld,fontSize:12}}>
+                      {ALL_SECTIONS.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <input type="number" value={m.price} onChange={e=>updateMod(i,'price',e.target.value)} style={{...num,width:"100%"}}/>
+                    <div style={{display:"flex",gap:5}}>
+                      <button onClick={()=>duplicateModule(m.id)} title="Duplicate" style={{background:SF2,border:`1px solid ${B0}`,borderRadius:6,padding:"5px 8px",cursor:"pointer",fontSize:13,color:S2}}>⧉</button>
+                      <button onClick={()=>deleteModule(m.id)} title="Delete" style={{background:`${RD}10`,border:`1px solid ${RD}25`,borderRadius:6,padding:"5px 8px",cursor:"pointer",fontSize:13,color:RD}}>🗑️</button>
+                    </div>
                   </div>
                 );
               })}
+              <div id="mod-bottom"/>
+              <div style={{marginTop:16,textAlign:"center"}}>
+                <Btn onClick={addModule} variant="ghost">+ Add Another Module</Btn>
+              </div>
             </div>
           )}
 
-          {/* ── SERVER PRICES ── */}
-          {aTab==='Server' && (
-            <div>
-              <STitle icon="🖥️" title="Server & Storage Pricing" sub="Edit base price per provider/package, and storage cost per 100GB."/>
+          {aTab==='Server'&&(
+            <div className="fade-in">
+              <STitle icon="🖥️" title="Server & Storage Pricing" sub="Edit base price per provider/package and storage cost per 100GB."/>
               <Card style={{marginBottom:16}}>
-                <div style={{fontFamily:"Syne,sans-serif",fontSize:13,fontWeight:700,color:T1,marginBottom:12}}>
-                  Package Prices (₹/mo)
-                </div>
+                <div style={{fontFamily:"Syne,sans-serif",fontSize:13,fontWeight:700,color:S0,marginBottom:12}}>Package Prices (₹/mo)</div>
                 <div style={{overflowX:"auto"}}>
-                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                    <thead>
-                      <tr>
-                        <th style={{textAlign:"left",padding:"6px 8px",color:S500,fontWeight:700}}>Provider</th>
-                        {PACKAGES.map(p=>(
-                          <th key={p} style={{padding:"6px 8px",color:S400,fontWeight:600,textAlign:"right"}}>{p}</th>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                    <thead><tr style={{background:SF2}}>
+                      <th style={{textAlign:"left",padding:"8px 10px",color:S2,fontWeight:700,borderBottom:`1px solid ${B0}`}}>Provider</th>
+                      {PACKAGES.map(p=><th key={p} style={{padding:"8px 10px",color:S2,fontWeight:600,textAlign:"right",borderBottom:`1px solid ${B0}`}}>{p}</th>)}
+                    </tr></thead>
+                    <tbody>{PROVIDERS.map((prov,pi)=>(
+                      <tr key={prov} style={{background:pi%2===0?SF:SF2}}>
+                        <td style={{padding:"7px 10px",color:T0,fontWeight:600}}>{prov}</td>
+                        {(pricing.srvPrices[prov]||[]).map((price,idx)=>(
+                          <td key={idx} style={{padding:"4px 6px"}}><input type="number" value={price} onChange={e=>updateSrv(prov,idx,e.target.value)} style={{...num,width:90}}/></td>
                         ))}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {PROVIDERS.map(prov=>(
-                        <tr key={prov}>
-                          <td style={{padding:"6px 8px",color:T1,fontWeight:600}}>{prov}</td>
-                          {(pricing.srvPrices[prov]||[]).map((price,pi)=>(
-                            <td key={pi} style={{padding:"4px 6px"}}>
-                              <input type="number" value={price}
-                                onChange={e=>updateSrv(prov,pi,e.target.value)}
-                                style={{...numFld,width:90}}/>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
+                    ))}</tbody>
                   </table>
                 </div>
               </Card>
               <Card>
-                <div style={{fontFamily:"Syne,sans-serif",fontSize:13,fontWeight:700,color:T1,marginBottom:12}}>
-                  Storage Cost per 100 GB/mo (₹)
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+                <div style={{fontFamily:"Syne,sans-serif",fontSize:13,fontWeight:700,color:S0,marginBottom:12}}>Storage Cost per 100 GB/mo (₹)</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
                   {PROVIDERS.map(prov=>(
-                    <div key={prov}>
-                      <Lbl>{prov}</Lbl>
-                      <input type="number" value={pricing.storCost[prov]||0}
-                        onChange={e=>updateStor(prov,e.target.value)}
-                        style={{...numFld,width:"100%"}}/>
-                    </div>
+                    <div key={prov}><Lbl>{prov}</Lbl><input type="number" value={pricing.storCost[prov]||0} onChange={e=>updateStor(prov,e.target.value)} style={{...num,width:"100%"}}/></div>
                   ))}
                 </div>
               </Card>
             </div>
           )}
 
-          {/* ── VOLUME TIERS ── */}
-          {aTab==='Volume Tiers' && (
-            <div>
-              <STitle icon="📊" title="Volume Tier Surcharges" sub="Monthly surcharge based on order volume. Applied on top of recurring cost."/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:7,
-                padding:"6px 10px",marginBottom:6}}>
-                {['Tier Label','Min Orders','Max Orders','Surcharge (₹/mo)'].map(h=>(
-                  <span key={h} style={{fontSize:10,fontWeight:700,color:S500,textTransform:"uppercase"}}>{h}</span>
-                ))}
+          {aTab==='VolumeTiers'&&(
+            <div className="fade-in">
+              <STitle icon="📊" title="Volume Tier Surcharges" sub="Monthly surcharge based on order volume."/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,padding:"6px 12px",marginBottom:6}}>
+                {['Tier Label','Min Orders','Max Orders','Surcharge (₹/mo)'].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:S2,textTransform:"uppercase"}}>{h}</span>)}
               </div>
               {pricing.volTiers.map((t,i)=>(
-                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:7,
-                  alignItems:"center",padding:"8px 10px",borderRadius:8,marginBottom:5,
-                  background:N2,border:`1px solid ${N4}`}}>
-                  <input value={t.label} onChange={e=>updateVolT(i,'label',e.target.value)} style={{...fldStyle,fontSize:12}}/>
-                  <input type="number" value={t.min} onChange={e=>updateVolT(i,'min',e.target.value)} style={numFld}/>
-                  <input type="number" value={t.max} onChange={e=>updateVolT(i,'max',e.target.value)} style={numFld}/>
-                  <input type="number" value={t.surcharge} onChange={e=>updateVolT(i,'surcharge',e.target.value)} style={numFld}/>
+                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,alignItems:"center",padding:"8px 12px",borderRadius:8,marginBottom:6,background:SF,border:`1px solid ${B0}`}}>
+                  <input value={t.label} onChange={e=>updateVolT(i,'label',e.target.value)} style={{...fld,fontSize:12}}/>
+                  <input type="number" value={t.min} onChange={e=>updateVolT(i,'min',e.target.value)} style={num}/>
+                  <input type="number" value={t.max} onChange={e=>updateVolT(i,'max',e.target.value)} style={num}/>
+                  <input type="number" value={t.surcharge} onChange={e=>updateVolT(i,'surcharge',e.target.value)} style={num}/>
                 </div>
               ))}
             </div>
           )}
 
-          {/* ── API SLABS ── */}
-          {aTab==='API Slabs' && (
-            <div>
+          {aTab==='APISlabs'&&(
+            <div className="fade-in">
               <STitle icon="🔌" title="API Volume Slab Surcharges" sub="Surcharge added per API based on monthly hit volume."/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:7,
-                padding:"6px 10px",marginBottom:6}}>
-                {['Slab Label','From (hits)','To (hits)','Surcharge (₹/mo)'].map(h=>(
-                  <span key={h} style={{fontSize:10,fontWeight:700,color:S500,textTransform:"uppercase"}}>{h}</span>
-                ))}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,padding:"6px 12px",marginBottom:6}}>
+                {['Slab Label','From (hits)','To (hits)','Surcharge (₹/mo)'].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:S2,textTransform:"uppercase"}}>{h}</span>)}
               </div>
               {pricing.apiSlabs.map((s,i)=>(
-                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:7,
-                  alignItems:"center",padding:"8px 10px",borderRadius:8,marginBottom:5,
-                  background:N2,border:`1px solid ${N4}`}}>
-                  <input value={s.label} onChange={e=>updateApiSl(i,'label',e.target.value)} style={{...fldStyle,fontSize:12}}/>
-                  <input type="number" value={s.from} onChange={e=>updateApiSl(i,'from',e.target.value)} style={numFld}/>
-                  <input type="number" value={s.to} onChange={e=>updateApiSl(i,'to',e.target.value)} style={numFld}/>
-                  <input type="number" value={s.surcharge} onChange={e=>updateApiSl(i,'surcharge',e.target.value)} style={numFld}/>
+                <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,alignItems:"center",padding:"8px 12px",borderRadius:8,marginBottom:6,background:SF,border:`1px solid ${B0}`}}>
+                  <input value={s.label} onChange={e=>updateApiSl(i,'label',e.target.value)} style={{...fld,fontSize:12}}/>
+                  <input type="number" value={s.from} onChange={e=>updateApiSl(i,'from',e.target.value)} style={num}/>
+                  <input type="number" value={s.to} onChange={e=>updateApiSl(i,'to',e.target.value)} style={num}/>
+                  <input type="number" value={s.surcharge} onChange={e=>updateApiSl(i,'surcharge',e.target.value)} style={num}/>
                 </div>
               ))}
             </div>
           )}
 
-          {/* ── RATE CARD ── */}
-          {aTab==='Rate Card' && (
-            <div>
-              <STitle icon="💼" title="Professional Services Rate Card" sub="Day rates for Custom Dev, Implementation and Training roles."/>
-              {[
-                {title:"Custom Development",key:"cdevRoles",color:T0},
-                {title:"Implementation",key:"implRoles",color:"#A78BFA"},
-                {title:"Training",key:"trainRoles",color:G0},
-              ].map(sec=>(
+          {aTab==='RateCard'&&(
+            <div className="fade-in">
+              <STitle icon="💼" title="Professional Services Rate Card" sub="Day rates for Custom Dev, Implementation and Training."/>
+              {[{title:"Custom Development",key:"cdevRoles",color:T0},{title:"Implementation",key:"implRoles",color:"#7C3AED"},{title:"Training & Enablement",key:"trainRoles",color:G0}].map(sec=>(
                 <Card key={sec.key} style={{marginBottom:16}}>
-                  <div style={{fontFamily:"Syne,sans-serif",fontSize:13,fontWeight:700,color:sec.color,marginBottom:12}}>
-                    {sec.title}
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:7,
-                    padding:"0 0 8px",marginBottom:6,borderBottom:`1px solid ${N4}`}}>
-                    {['Role','Note','Day Rate (₹)'].map(h=>(
-                      <span key={h} style={{fontSize:10,fontWeight:700,color:S500,textTransform:"uppercase"}}>{h}</span>
-                    ))}
+                  <div style={{fontFamily:"Syne,sans-serif",fontSize:14,fontWeight:700,color:sec.color,marginBottom:14}}>{sec.title}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8,paddingBottom:8,marginBottom:8,borderBottom:`1px solid ${B0}`}}>
+                    {['Role','Note','Day Rate (₹)'].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:S2,textTransform:"uppercase"}}>{h}</span>)}
                   </div>
                   {pricing[sec.key].map((r,i)=>(
-                    <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:7,
-                      alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${N4}20`}}>
-                      <span style={{fontSize:12,color:S200,fontWeight:500}}>{r.role}</span>
-                      <input value={r.note||''} onChange={e=>updateRole(sec.key,i,'note',e.target.value)}
-                        style={{...fldStyle,fontSize:11}}/>
-                      <input type="number" value={r.rate} onChange={e=>updateRole(sec.key,i,'rate',e.target.value)}
-                        style={numFld}/>
+                    <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:8,alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${B0}`}}>
+                      <span style={{fontSize:13,color:S0,fontWeight:500}}>{r.role}</span>
+                      <input value={r.note||''} onChange={e=>updateRole(sec.key,i,'note',e.target.value)} style={{...fld,fontSize:12}}/>
+                      <input type="number" value={r.rate} onChange={e=>updateRole(sec.key,i,'rate',e.target.value)} style={num}/>
                     </div>
                   ))}
                 </Card>

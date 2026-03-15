@@ -26,17 +26,14 @@ const defaultPricing = () => ({
 
 export default function App() {
   const [user,    setUser]    = useState(null);
-  const [page,    setPage]    = useState('dashboard'); // 'dashboard'|'admin'|'history'
+  const [page,    setPage]    = useState('dashboard');
   const [pricing, setPricing] = useState(defaultPricing);
   const [loading, setLoading] = useState(true);
-  const [loadQuote, setLoadQuote] = useState(null); // quote to restore in Dashboard
+  const [loadQuote, setLoadQuote] = useState(null);
 
-  /* ── On mount: check session + load pricing config ────────────────── */
   useEffect(() => {
     async function init() {
-      // Load pricing from DB or localStorage
       await loadPricing();
-      // Check existing session
       if (isConfigured) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -44,7 +41,6 @@ export default function App() {
             .from('profiles').select('*').eq('id', session.user.id).single();
           setUser(prof || { id:session.user.id, email:session.user.email, full_name:session.user.email, role:'sales' });
         }
-        // Listen for auth changes
         supabase.auth.onAuthStateChange(async (_event, session) => {
           if (!session) { setUser(null); return; }
           const { data: prof } = await supabase
@@ -62,7 +58,6 @@ export default function App() {
       const { data } = await supabase.from('pricing_config').select('config').eq('id',1).single();
       if (data?.config) { setPricing(data.config); return; }
     }
-    // Fallback: localStorage
     const raw = localStorage.getItem('etechcube_pricing');
     if (raw) { try { setPricing(JSON.parse(raw)); } catch {} }
   }
@@ -71,6 +66,7 @@ export default function App() {
     if (isConfigured) await supabase.auth.signOut();
     setUser(null);
     setPage('dashboard');
+    sessionStorage.clear();
   }
 
   function handleLoadQuote(q) {
@@ -80,8 +76,12 @@ export default function App() {
 
   if (loading) {
     return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#060D18"}}>
-        <Spinner/>
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#F8FAFC"}}>
+        <div style={{textAlign:"center"}}>
+          <img src="/etechcube-logo.png" alt="eTechCube" style={{height:48,marginBottom:20,objectFit:"contain"}}
+            onError={e=>{e.target.style.display='none';}}/>
+          <Spinner/>
+        </div>
       </div>
     );
   }
@@ -91,11 +91,8 @@ export default function App() {
   }
 
   if (page === 'admin') {
-    if (user.role !== 'admin') {
-      setPage('dashboard');
-      return null;
-    }
-    return <Admin pricing={pricing} setPricing={setPricing} onBack={()=>setPage('dashboard')}/>;
+    if (user.role !== 'admin') { setPage('dashboard'); return null; }
+    return <Admin pricing={pricing} setPricing={setPricing} onBack={()=>setPage('dashboard')} user={user}/>;
   }
 
   if (page === 'history') {
@@ -108,10 +105,9 @@ export default function App() {
     );
   }
 
-  // Default: dashboard
   return (
     <Dashboard
-      key={loadQuote?.id || 'new'}   // remount when loading a different quote
+      key={loadQuote?.id || 'new'}
       user={user}
       pricing={pricing}
       initialQuote={loadQuote}
