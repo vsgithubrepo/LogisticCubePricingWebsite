@@ -36,6 +36,7 @@ export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout,
   const [saving,   setSaving]   = useState(false);
   const [saveMsg,  setSaveMsg]  = useState('');
   const [quoteId,  setQuoteId]  = useState(null);
+  const [includeDetails, setIncludeDetails] = useState(true);
 
   const calc = useMemo(() => calcTotals({
     cfg, mods, modList, srv, srvPrices, storCost, apiState, apiList, apiSlabs, volTiers, gbl,
@@ -486,9 +487,26 @@ export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout,
                 </div>
               </div>
 
+              {/* PDF Options */}
+              <div style={{background:SF2,border:`1px solid ${B0}`,borderRadius:10,padding:"14px 18px",marginBottom:14}}>
+                <div style={{fontSize:13,fontWeight:600,color:S0,marginBottom:10}}>📄 PDF Export Options</div>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 14px",background:SF,border:`1px solid ${B0}`,borderRadius:8,cursor:"pointer"}}
+                    onClick={()=>setIncludeDetails(v=>!v)}>
+                    <div style={{width:18,height:18,borderRadius:4,background:includeDetails?T0:SF2,border:`1.5px solid ${includeDetails?T0:B1}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {includeDetails&&<span style={{color:W,fontSize:12,lineHeight:1}}>✓</span>}
+                    </div>
+                    <span style={{fontSize:13,color:S0,fontWeight:500}}>Include full module & API detail pages</span>
+                  </div>
+                  <span style={{fontSize:12,color:S2}}>
+                    {includeDetails?"PDF will include cover summary + detailed module list":"PDF will include cover summary only (shorter, cleaner)"}
+                  </span>
+                </div>
+              </div>
+
               {/* Export buttons */}
               <div style={{display:"flex",gap:12}}>
-                <button onClick={()=>exportPDF(exportArgs)} style={{flex:1,padding:"13px",borderRadius:10,border:"none",background:"#DC2626",color:W,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"DM Sans,sans-serif"}}>
+                <button onClick={()=>exportPDF({...exportArgs,includeDetails})} style={{flex:1,padding:"13px",borderRadius:10,border:"none",background:"#DC2626",color:W,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"DM Sans,sans-serif"}}>
                   📄 Download PDF Quote
                 </button>
                 <button onClick={()=>exportExcel(exportArgs)} style={{flex:1,padding:"13px",borderRadius:10,border:"none",background:"#16A34A",color:W,fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontFamily:"DM Sans,sans-serif"}}>
