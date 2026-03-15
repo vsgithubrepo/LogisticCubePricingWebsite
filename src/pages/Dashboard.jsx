@@ -58,32 +58,38 @@ export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout,
   async function saveQuote() {
     if (!cfg.company) { alert("Please enter the customer company name first (Configuration tab)."); return; }
     setSaving(true);
-    const selMods = modList.filter(m => mods[m.id]);
-    const payload = {
-      created_by: user.id, created_by_email: user.email,
-      created_by_name: user.full_name || user.email,
-      customer_name: cfg.contact || cfg.company,
-      customer_email: cfg.email, customer_company: cfg.company,
-      grand_total: calc.grand, billing_cycle: cfg.billing,
-      quote_data: { cfg, mods, srv, apiState, cdevSt, implSt, trnSt, calc, selMods },
-      updated_at: new Date().toISOString(),
-    };
-    if (isConfigured) {
-      if (quoteId) {
-        await supabase.from('quotes').update(payload).eq('id', quoteId);
+    try {
+      // Only save the inputs needed to reconstruct the quote — not computed results
+      const payload = {
+        created_by: user.id, created_by_email: user.email,
+        created_by_name: user.full_name || user.email,
+        customer_name: cfg.contact || cfg.company,
+        customer_email: cfg.email, customer_company: cfg.company,
+        grand_total: calc.grand, billing_cycle: cfg.billing,
+        quote_data: { cfg, mods, srv, apiState, cdevSt, implSt, trnSt },
+        updated_at: new Date().toISOString(),
+      };
+      if (isConfigured) {
+        const saveOp = quoteId
+          ? supabase.from('quotes').update(payload).eq('id', quoteId)
+          : supabase.from('quotes').insert({ ...payload, created_at: new Date().toISOString() }).select().single();
+        const timeout = new Promise((_,reject) => setTimeout(()=>reject(new Error('Save timed out — check your internet connection')), 10000));
+        const result = await Promise.race([saveOp, timeout]);
+        if (!quoteId && result?.data) setQuoteId(result.data.id);
       } else {
-        const { data } = await supabase.from('quotes').insert({ ...payload, created_at: new Date().toISOString() }).select().single();
-        if (data) setQuoteId(data.id);
+        const raw = localStorage.getItem('etechcube_quotes');
+        const all = raw ? JSON.parse(raw) : [];
+        if (quoteId) { const idx=all.findIndex(q=>q.id===quoteId); if(idx>=0) all[idx]={...all[idx],...payload}; }
+        else { const id=Date.now().toString(); setQuoteId(id); all.unshift({...payload,id,created_at:new Date().toISOString()}); }
+        localStorage.setItem('etechcube_quotes', JSON.stringify(all));
       }
-    } else {
-      const raw = localStorage.getItem('etechcube_quotes');
-      const all = raw ? JSON.parse(raw) : [];
-      if (quoteId) { const idx=all.findIndex(q=>q.id===quoteId); if(idx>=0) all[idx]={...all[idx],...payload}; }
-      else { const id=Date.now().toString(); setQuoteId(id); all.unshift({...payload,id,created_at:new Date().toISOString()}); }
-      localStorage.setItem('etechcube_quotes', JSON.stringify(all));
+      setSaveMsg('✓ Quote saved!');
+    } catch(err) {
+      setSaveMsg('❌ ' + (err.message || 'Save failed — try again'));
+    } finally {
+      setSaving(false);
+      setTimeout(()=>setSaveMsg(''), 4000);
     }
-    setSaving(false); setSaveMsg('✓ Quote saved!');
-    setTimeout(()=>setSaveMsg(''), 3000);
   }
 
   function clearDraft() {
