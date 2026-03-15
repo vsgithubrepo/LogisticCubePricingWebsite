@@ -5,7 +5,7 @@ import { SEC_META, PROVIDERS, PACKAGES, PKG_SPECS, STOR_OPT } from '../data/defa
 import { calcTotals, getApiSlab } from '../utils/calc.js';
 import { exportPDF } from '../utils/exportPDF.js';
 import { exportExcel } from '../utils/exportExcel.js';
-import { usePersistentState } from '../hooks/usePersistentState.js';
+import { usePersistentState, seedPersistentState } from '../hooks/usePersistentState.js';
 
 const SECS = Object.keys(SEC_META);
 
@@ -23,6 +23,17 @@ const TABS = [
 export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout, initialQuote }) {
   const { gbl, volTiers, apiSlabs, srvPrices, storCost, modList, apiList, cdevRoles, implRoles, trainRoles } = pricing;
 
+  // When loading a saved quote, seed sessionStorage so usePersistentState picks it up
+  if (initialQuote?.quote_data) {
+    const iq = initialQuote.quote_data;
+    seedPersistentState({
+      'etec_cfg': iq.cfg,
+      'etec_mods': iq.mods,
+      'etec_srv': iq.srv,
+      'etec_api': iq.apiState,
+    });
+  }
+
   const [tab,      setTab]      = usePersistentState('etec_tab', 'config');
   const [activeSec,setActiveSec]= usePersistentState('etec_sec', SECS[0]);
   const [modQ,     setModQ]     = useState('');
@@ -30,12 +41,13 @@ export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout,
   const [mods,     setMods]     = usePersistentState('etec_mods', () => { const m={}; modList.forEach(x=>{m[x.id]=!!x.pro;}); return m; });
   const [srv,      setSrv]      = usePersistentState('etec_srv', { provider:"AWS", pkg:"Business", storageGB:0, backup:false });
   const [apiState, setApiState] = usePersistentState('etec_api', () => apiList.map(()=>({ on:false, p:0, hits:0 })));
-  const [cdevSt,   setCdevSt]   = useState(() => cdevRoles.map(()=>({ res:0, days:0 })));
-  const [implSt,   setImplSt]   = useState(() => [{ res:1,days:10 },{ res:2,days:20 },{ res:2,days:30 }]);
-  const [trnSt,    setTrnSt]    = useState(() => [{ res:2,days:5  },{ res:1,days:10 },{ res:2,days:15 }]);
+  const iq2 = initialQuote?.quote_data || {};
+  const [cdevSt,   setCdevSt]   = useState(() => iq2.cdevSt || cdevRoles.map(()=>({ res:0, days:0 })));
+  const [implSt,   setImplSt]   = useState(() => iq2.implSt || [{ res:1,days:10 },{ res:2,days:20 },{ res:2,days:30 }]);
+  const [trnSt,    setTrnSt]    = useState(() => iq2.trnSt || [{ res:2,days:5  },{ res:1,days:10 },{ res:2,days:15 }]);
   const [saving,   setSaving]   = useState(false);
   const [saveMsg,  setSaveMsg]  = useState('');
-  const [quoteId,  setQuoteId]  = useState(null);
+  const [quoteId,  setQuoteId]  = useState(initialQuote?.id || null);
   const [includeDetails, setIncludeDetails] = useState(true);
 
   const calc = useMemo(() => calcTotals({
@@ -100,7 +112,7 @@ export default function Dashboard({ user, pricing, onAdmin, onHistory, onLogout,
       <div style={{background:SF,borderBottom:`1px solid ${B0}`,height:62,padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:"0 1px 8px rgba(0,0,0,.06)"}}>
         {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <img src="/etechcube-logo.jpg" alt="eTechCube" style={{height:34,objectFit:"contain"}}
+          <img src="/etechcube-logo.png" alt="eTechCube" style={{height:34,objectFit:"contain"}}
             onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}}/>
           <div style={{display:"none",width:34,height:34,borderRadius:10,background:`linear-gradient(135deg,${T0},#0A6E68)`,alignItems:"center",justifyContent:"center",fontFamily:"Syne,sans-serif",fontWeight:800,fontSize:17,color:W}}>e</div>
           <div>

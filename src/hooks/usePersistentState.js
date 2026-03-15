@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
 export function usePersistentState(key, initialValue) {
   const [state, setState] = useState(() => {
     try {
@@ -10,4 +11,12 @@ export function usePersistentState(key, initialValue) {
     try { sessionStorage.setItem(key, JSON.stringify(state)); } catch {}
   }, [key, state]);
   return [state, setState];
+}
+
+export function seedPersistentState(data) {
+  try {
+    Object.entries(data).forEach(([key, value]) => {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    });
+  } catch {}
 }
